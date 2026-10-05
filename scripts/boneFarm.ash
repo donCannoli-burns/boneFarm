@@ -200,6 +200,48 @@ void bonefarm_restore_mcd(int original_mcd)
     }
 }
 
+string bonefarm_pending_choice_summary()
+{
+    int choice_id = last_choice();
+    string summary = "choice #" + choice_id;
+    string [int] options = available_choice_options();
+
+    if (count(options) == 0)
+    {
+        return summary + " (KoLmafia could not parse any visible options)";
+    }
+
+    summary = summary + " options:";
+    foreach decision, label in options
+    {
+        summary = summary + " [" + decision + "] " + label + ";";
+    }
+
+    return summary;
+}
+
+void bonefarm_preflight_session()
+{
+    if (!handling_choice())
+    {
+        return;
+    }
+
+    string summary = bonefarm_pending_choice_summary();
+
+    print("boneFarm cannot start while KoLmafia is handling " + summary, "red");
+    if (can_walk_from_choice())
+    {
+        print("This choice can be walked away from. Leave or resolve it, then rerun boneFarm.", "orange");
+    }
+    else
+    {
+        print("This choice must be resolved before boneFarm can change equipment or adventure.", "orange");
+    }
+
+    abort("boneFarm stopped before changing state: resolve " + summary + " and rerun.");
+}
+
 int bonefarm_bones_collected()
 {
     return get_property("_knuckleboneDrops").to_int();
@@ -380,6 +422,7 @@ void main()
         return;
     }
 
+    bonefarm_preflight_session();
     bonefarm_preflight();
     bonefarm_unlock_skeleton_store();
 
