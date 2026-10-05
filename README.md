@@ -53,3 +53,5 @@ The script explicitly selects the familiar, familiar equipment, mood, and CCS as
 This repository is laid out with the script under `scripts/`, which is the directory KoLmafia's Git installer copies into your local `scripts/` directory.
 
 - Refuses to start while KoLmafia is already handling an unresolved choice adventure. boneFarm reports the choice number and visible options, then stops before changing equipment/mood/CCS; it never picks a choice on the user's behalf.
+
+- Temporarily overrides `choiceAdventure1060` (Skeleton Store: **Temporarily Out of Skeletons**) to option `5` / **skip adventure**, then restores the user's previous value in cleanup. If boneFarm starts while that exact Skeleton Store choice is already pending, it safely takes option 5 and continues; unrelated pending choices still require manual resolution.
