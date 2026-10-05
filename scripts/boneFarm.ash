@@ -12,6 +12,9 @@ string BONEFARM_MOOD = "bonefarm";
 string BONEFARM_CCS = "bonefarm";
 int BONEFARM_DAILY_CAP = 100;
 int BONEFARM_RESERVE_ADVENTURES = 2;
+int BONEFARM_SKELETON_STORE_CHOICE = 1060;
+int BONEFARM_SKELETON_STORE_SKIP = 5;
+string BONEFARM_SKELETON_STORE_PREF = "choiceAdventure1060";
 string [int] BONEFARM_MOOD_TRIGGERS;
 boolean BONEFARM_MANUAL_MOOD = false;
 
@@ -227,6 +230,23 @@ void bonefarm_preflight_session()
         return;
     }
 
+    if (last_choice() == BONEFARM_SKELETON_STORE_CHOICE)
+    {
+        string [int] options = available_choice_options();
+        if (options[BONEFARM_SKELETON_STORE_SKIP] != "")
+        {
+            print("boneFarm found pending Skeleton Store choice #" +
+                BONEFARM_SKELETON_STORE_CHOICE + "; taking option " +
+                BONEFARM_SKELETON_STORE_SKIP + " (skip adventure).", "blue");
+            run_choice(BONEFARM_SKELETON_STORE_SKIP);
+
+            if (!handling_choice())
+            {
+                return;
+            }
+        }
+    }
+
     string summary = bonefarm_pending_choice_summary();
 
     print("boneFarm cannot start while KoLmafia is handling " + summary, "red");
@@ -299,8 +319,10 @@ void bonefarm_preflight()
 }
 
 void bonefarm_restore_state(familiar original_familiar, item original_familiar_item,
-    string original_mood, string original_ccs, int original_mcd)
+    string original_mood, string original_ccs, int original_mcd,
+    string original_choice_1060)
 {
+    set_property(BONEFARM_SKELETON_STORE_PREF, original_choice_1060);
     // Restore MCD before the user's original mood so their normal automation sees
     // the same monster-control state it had before boneFarm.
     bonefarm_restore_mcd(original_mcd);
@@ -431,6 +453,7 @@ void main()
     string original_mood = get_property("currentMood");
     string original_ccs = get_property("customCombatScript");
     int original_mcd = current_mcd();
+    string original_choice_1060 = get_property(BONEFARM_SKELETON_STORE_PREF);
 
     boolean checkpoint_ok = cli_execute("checkpoint");
     if (!checkpoint_ok)
@@ -440,6 +463,9 @@ void main()
 
     try
     {
+        set_property(BONEFARM_SKELETON_STORE_PREF,
+            BONEFARM_SKELETON_STORE_SKIP.to_string());
+
         if (!outfit(BONEFARM_OUTFIT))
         {
             abort("boneFarm could not equip the 'bonefarm' outfit.");
@@ -468,7 +494,7 @@ void main()
     finally
     {
         bonefarm_restore_state(original_familiar, original_familiar_item, original_mood, original_ccs,
-            original_mcd);
+            original_mcd, original_choice_1060);
         bonefarm_run_tracker();
     }
 }
