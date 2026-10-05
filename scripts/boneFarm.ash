@@ -12,6 +12,145 @@ string BONEFARM_MOOD = "bonefarm";
 string BONEFARM_CCS = "bonefarm";
 int BONEFARM_DAILY_CAP = 100;
 int BONEFARM_RESERVE_ADVENTURES = 2;
+string [int] BONEFARM_MOOD_TRIGGERS;
+boolean BONEFARM_MANUAL_MOOD = false;
+
+boolean bonefarm_is_mcd_action(string action)
+{
+    string normalized = to_lower_case(action);
+    return starts_with(normalized, "mcd ") ||
+        starts_with(normalized, "mind-control ") ||
+        starts_with(normalized, "mind control ");
+}
+
+boolean bonefarm_is_skill_action(string action)
+{
+    string normalized = to_lower_case(action);
+    return starts_with(normalized, "cast ") || starts_with(normalized, "buff ");
+}
+
+boolean bonefarm_unstackable_action(string action)
+{
+    string normalized = to_lower_case(action);
+    return contains_text(normalized, "absinthe") ||
+        contains_text(normalized, "astral mushroom") ||
+        contains_text(normalized, "oasis") ||
+        contains_text(normalized, "turtle pheromones") ||
+        contains_text(normalized, "gong");
+}
+
+boolean bonefarm_trigger_due(string trigger_type, string trigger_name, string action)
+{
+    if (trigger_type == "unconditional")
+    {
+        return true;
+    }
+
+    effect trigger_effect = to_effect(trigger_name);
+    int active_turns = have_effect(trigger_effect);
+
+    if (trigger_type == "gain_effect")
+    {
+        return active_turns > 0;
+    }
+
+    if (trigger_type == "lose_effect")
+    {
+        if (bonefarm_unstackable_action(action))
+        {
+            return active_turns == 0;
+        }
+
+        // KoLmafia's normal between-battle mood maintenance executes lose-effect
+        // triggers when the effect has 1 turn or less remaining.
+        return active_turns <= 1;
+    }
+
+    return false;
+}
+
+void bonefarm_run_manual_mood_pass(boolean skill_pass)
+{
+    foreach i, trigger in BONEFARM_MOOD_TRIGGERS
+    {
+        string [int] parts = split_string(trigger, " \\| ");
+        if (count(parts) < 3)
+        {
+            print("WARNING: boneFarm could not parse mood trigger: " + trigger, "orange");
+            continue;
+        }
+
+        string trigger_type = parts[0];
+        string trigger_name = parts[1];
+        string action = parts[2];
+
+        if (bonefarm_is_mcd_action(action))
+        {
+            continue;
+        }
+
+        if (bonefarm_is_skill_action(action) != skill_pass)
+        {
+            continue;
+        }
+
+        if (!bonefarm_trigger_due(trigger_type, trigger_name, action))
+        {
+            continue;
+        }
+
+        boolean action_ok = false;
+        string action_error = catch
+        {
+            action_ok = cli_execute(action);
+        };
+
+        if (action_error != "")
+        {
+            abort("boneFarm mood action failed: " + action + " :: " + action_error);
+        }
+
+        if (!action_ok)
+        {
+            abort("boneFarm mood action failed: " + action);
+        }
+    }
+}
+
+void bonefarm_maintain_mood()
+{
+    if (!BONEFARM_MANUAL_MOOD)
+    {
+        return;
+    }
+
+    // Match KoLmafia MoodManager ordering: skill actions first, then everything else.
+    bonefarm_run_manual_mood_pass(true);
+    bonefarm_run_manual_mood_pass(false);
+}
+
+void bonefarm_prepare_mood()
+{
+    BONEFARM_MOOD_TRIGGERS = mood_list();
+    BONEFARM_MANUAL_MOOD = false;
+
+    foreach i, trigger in BONEFARM_MOOD_TRIGGERS
+    {
+        string [int] parts = split_string(trigger, " \\| ");
+        if (count(parts) >= 3 && bonefarm_is_mcd_action(parts[2]))
+        {
+            BONEFARM_MANUAL_MOOD = true;
+            break;
+        }
+    }
+
+    if (BONEFARM_MANUAL_MOOD)
+    {
+        print("boneFarm detected a legacy MCD trigger in the 'bonefarm' mood; " +
+            "using script-managed mood maintenance for this run.", "orange");
+        set_property("currentMood", "apathetic");
+    }
+}
 
 int bonefarm_target_mcd()
 {
@@ -180,6 +319,8 @@ void bonefarm_farm()
         int bones_before = bonefarm_bones_collected();
         int adventures_before = my_adventures();
 
+        bonefarm_maintain_mood();
+
         boolean adventure_ok = false;
         string adventure_error = catch
         {
@@ -263,6 +404,7 @@ void main()
 
         set_property("currentMood", BONEFARM_MOOD);
         set_property("customCombatScript", BONEFARM_CCS);
+        bonefarm_prepare_mood();
 
         if (!use_familiar(BONEFARM_FAMILIAR))
         {
@@ -274,7 +416,8 @@ void main()
             abort("boneFarm could not equip the small peppermint-flavored sugar walking crook.");
         }
 
-        // boneFarm owns MCD while it runs. Keep MCD commands out of the bonefarm mood.
+        // boneFarm owns MCD while it runs. Legacy mood MCD commands are ignored by
+        // the compatibility fallback in bonefarm_prepare_mood().
         bonefarm_set_mcd();
 
         bonefarm_farm();
