@@ -14,7 +14,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "21"
@@ -28,13 +28,17 @@ jobs:
       - name: Verify boneFarm.ash with KoLmafia
         shell: bash
         run: |
-          cat > scripts/__bonefarm_verify.txt <<'EOF'
+          mkdir -p "$HOME/.kolmafia/scripts"
+          cp scripts/boneFarm.ash "$HOME/.kolmafia/scripts/boneFarm.ash"
+
+          cat > "$HOME/.kolmafia/scripts/__bonefarm_verify.txt" <<'EOF'
           verify boneFarm.ash
           exit
           EOF
 
-          timeout 60s java -jar KoLmafia-29334.jar --CLI scripts/__bonefarm_verify.txt \
-            > verify.log 2>&1 || true
+          cd "$HOME/.kolmafia"
+          timeout 60s java -jar "$GITHUB_WORKSPACE/KoLmafia-29334.jar" --CLI __bonefarm_verify.txt \
+            > "$GITHUB_WORKSPACE/verify.log" 2>&1 || true
 
-          cat verify.log
-          grep -Fq "Script verification complete." verify.log
+          cat "$GITHUB_WORKSPACE/verify.log"
+          grep -Fq "Script verification complete." "$GITHUB_WORKSPACE/verify.log"
