@@ -51,3 +51,5 @@ The script explicitly selects the familiar, familiar equipment, mood, and CCS as
 `boneTrack.ash` is optional. If it is installed, boneFarm calls it before and after farming with `boneTrackEnableWiki=false`; if it is not installed, farming continues normally.
 
 This repository is laid out with the script under `scripts/`, which is the directory KoLmafia's Git installer copies into your local `scripts/` directory.
+
+- Refuses to start while KoLmafia is already handling an unresolved choice adventure. boneFarm reports the choice number and visible options, then stops before changing equipment/mood/CCS; it never picks a choice on the user's behalf.
