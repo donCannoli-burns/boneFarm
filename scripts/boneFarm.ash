@@ -128,7 +128,22 @@ void bonefarm_farm()
         int bones_before = bonefarm_bones_collected();
         int adventures_before = my_adventures();
 
-        boolean adventure_ok = adventure(1, BONEFARM_LOCATION);
+        boolean adventure_ok = false;
+        string adventure_error = catch
+        {
+            adventure_ok = adventure(1, BONEFARM_LOCATION);
+        };
+
+        if (adventure_error != "")
+        {
+            if (contains_text(adventure_error, "The dial only goes from 0 to 10."))
+            {
+                abort("boneFarm: your 'bonefarm' mood tried to set MCD 11, but this character only has a 0-10 Mind Control Device. Change that mood action to 'mcd 10' (MCD 11 is only available with Little Canadia access).");
+            }
+
+            abort("boneFarm: KoLmafia stopped before spending an adventure: " + adventure_error);
+        }
+
         if (!adventure_ok)
         {
             print("KoLmafia stopped adventuring before the knucklebone cap was reached.", "red");
