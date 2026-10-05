@@ -190,7 +190,7 @@ void bonefarm_farm()
         {
             if (contains_text(adventure_error, "The dial only goes from 0 to 10."))
             {
-                abort("boneFarm: your 'bonefarm' mood tried to set MCD 11, but this character only has a 0-10 Mind Control Device. Change that mood action to 'mcd 10' (MCD 11 is only available with Little Canadia access).");
+                abort("boneFarm: your 'bonefarm' mood still contains an MCD command. Remove the mood's mcd 10/mcd 11 trigger entirely; boneFarm now owns MCD selection and restoration.");
             }
 
             abort("boneFarm: KoLmafia stopped before spending an adventure: " + adventure_error);
