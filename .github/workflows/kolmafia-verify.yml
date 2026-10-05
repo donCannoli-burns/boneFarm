@@ -1,0 +1,40 @@
+name: KoLmafia verify
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  verify-ash:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Download KoLmafia r29334
+        run: |
+          curl -L --fail --silent --show-error \
+            -o KoLmafia-29334.jar \
+            https://github.com/kolmafia/kolmafia/releases/download/r29334/KoLmafia-29334.jar
+
+      - name: Verify boneFarm.ash with KoLmafia
+        shell: bash
+        run: |
+          cat > scripts/__bonefarm_verify.txt <<'EOF'
+          verify boneFarm.ash
+          exit
+          EOF
+
+          timeout 60s java -jar KoLmafia-29334.jar --CLI scripts/__bonefarm_verify.txt \
+            > verify.log 2>&1 || true
+
+          cat verify.log
+          grep -Fq "Script verification complete." verify.log
