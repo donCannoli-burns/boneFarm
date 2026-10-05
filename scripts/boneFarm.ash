@@ -13,6 +13,54 @@ string BONEFARM_CCS = "bonefarm";
 int BONEFARM_DAILY_CAP = 100;
 int BONEFARM_RESERVE_ADVENTURES = 2;
 
+int bonefarm_target_mcd()
+{
+    // Mysticality zodiac signs have Little Canadia's MCD, which supports level 11.
+    // Other MCD variants top out at 10.
+    return in_mysticality_sign() ? 11 : 10;
+}
+
+void bonefarm_set_mcd()
+{
+    int target_mcd = bonefarm_target_mcd();
+
+    if (current_mcd() == target_mcd)
+    {
+        print("boneFarm MCD already set to " + target_mcd + ".", "gray");
+        return;
+    }
+
+    boolean changed = change_mcd(target_mcd);
+
+    if (!changed || current_mcd() != target_mcd)
+    {
+        print("boneFarm could not set MCD to " + target_mcd +
+            "; MCD may be unavailable in this path/limit mode. Continuing at MCD " +
+            current_mcd() + ".", "orange");
+        return;
+    }
+
+    print("boneFarm set MCD to " + target_mcd + ".", "blue");
+}
+
+void bonefarm_restore_mcd(int original_mcd)
+{
+    if (current_mcd() == original_mcd)
+    {
+        return;
+    }
+
+    boolean restored = change_mcd(original_mcd);
+    if (!restored || current_mcd() != original_mcd)
+    {
+        print("WARNING: Could not restore the original MCD level " + original_mcd + ".", "red");
+    }
+    else
+    {
+        print("boneFarm restored MCD to " + original_mcd + ".", "gray");
+    }
+}
+
 int bonefarm_bones_collected()
 {
     return get_property("_knuckleboneDrops").to_int();
@@ -70,8 +118,12 @@ void bonefarm_preflight()
 }
 
 void bonefarm_restore_state(familiar original_familiar, item original_familiar_item,
-    string original_mood, string original_ccs)
+    string original_mood, string original_ccs, int original_mcd)
 {
+    // Restore MCD before the user's original mood so their normal automation sees
+    // the same monster-control state it had before boneFarm.
+    bonefarm_restore_mcd(original_mcd);
+
     set_property("currentMood", original_mood);
     set_property("customCombatScript", original_ccs);
 
@@ -194,6 +246,7 @@ void main()
     item original_familiar_item = familiar_equipped_equipment(original_familiar);
     string original_mood = get_property("currentMood");
     string original_ccs = get_property("customCombatScript");
+    int original_mcd = current_mcd();
 
     boolean checkpoint_ok = cli_execute("checkpoint");
     if (!checkpoint_ok)
@@ -221,11 +274,15 @@ void main()
             abort("boneFarm could not equip the small peppermint-flavored sugar walking crook.");
         }
 
+        // boneFarm owns MCD while it runs. Keep MCD commands out of the bonefarm mood.
+        bonefarm_set_mcd();
+
         bonefarm_farm();
     }
     finally
     {
-        bonefarm_restore_state(original_familiar, original_familiar_item, original_mood, original_ccs);
+        bonefarm_restore_state(original_familiar, original_familiar_item, original_mood, original_ccs,
+            original_mcd);
         bonefarm_run_tracker();
     }
 }
