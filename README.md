@@ -22,7 +22,7 @@ call boneFarm.ash
 - Skeleton of Crimbo Past familiar.
 - `small peppermint-flavored sugar walking crook`.
 - An equippable custom outfit named `bonefarm`.
-- A mood named `bonefarm` containing buffs/effects only. **Remove any `mcd 10` / `mcd 11` trigger from this mood; boneFarm now owns MCD selection itself.**
+- A mood named `bonefarm`. boneFarm owns MCD selection itself. Old `mcd 10` / `mcd 11` mood triggers are tolerated: boneFarm detects them, disables KoLmafia's automatic mood execution for the farming window, and maintains the remaining non-MCD triggers itself.
 - A CCS named `bonefarm`.
 
 The outfit can still use KoLmafia's hidden outfit modifiers, for example:
@@ -42,6 +42,7 @@ The script explicitly selects the familiar, familiar equipment, mood, and CCS as
 - Replaces the stale `turns_spent > KBneeded_adv` watchdog with a no-progress guard.
 - Uses `try/finally` so the original familiar, familiar equipment, outfit checkpoint, mood, CCS, and MCD level are restored even if farming aborts.
 - Owns MCD while farming: level 11 for Mysticality/Little Canadia signs, level 10 otherwise; if MCD is unavailable in the current path/limit mode it leaves the current level unchanged.
+- Provides a legacy-mood compatibility fallback: if the `bonefarm` mood still contains an MCD command, boneFarm snapshots the trigger list, switches KoLmafia's automatic mood to `apathetic`, runs the non-MCD mood actions itself using KoLmafia's normal skill-first / low-duration semantics, and restores the user's original mood afterward.
 - Keeps `boneTrack.ash` integration optional and restores `boneTrackEnableWiki` after each tracker call.
 - Unlocks The Skeleton Store through the Meatsmith quest when needed.
 
